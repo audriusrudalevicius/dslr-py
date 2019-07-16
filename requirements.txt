@@ -1,0 +1,12 @@
+tensorflow==1.14.*
+tensorflow-gpu==1.14.*
+scipy==1.2.*
+numpy==1.16.*
+pillow==6.1.*
+tqdm==4.32.2
+imageio==2.5.*
+opencv-python==3.1.0.*
+scikit-learn==0.21.*
+backoff==1.8.*
+colorlog==4.0.*
+boto3==1.9.*

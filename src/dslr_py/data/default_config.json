@@ -1,0 +1,29 @@
+{
+  "s3": {
+    "upload": false,
+    "bucket_name": "",
+    "path_format": "{}/e_{}/{}",
+    "name_hash_format": "{}/e{}",
+    "extra_args": {
+      "CacheControl" : "max-age=7884000",
+      "ContentType" : "image/jpeg"
+    },
+    "ACCESS_KEY": "",
+    "SECRET_KEY": ""
+  },
+  "model" : "iphone_orig",
+  "sizes": [
+    {
+      "name": "small",
+      "width": 384
+    },
+    {
+      "name": "medium",
+      "width": 768
+    },
+    {
+      "name": "large",
+      "width": 1152
+    }
+  ]
+}

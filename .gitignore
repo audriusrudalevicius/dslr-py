@@ -1,0 +1,7 @@
+/dist/*
+/venv
+/.vscode
+/.idea
+*.egg-info
+/__pycache__/
+*.log
