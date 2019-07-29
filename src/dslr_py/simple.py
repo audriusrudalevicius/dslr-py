@@ -100,12 +100,12 @@ def main(fp=sys.stdout, argv=None):
 
     for file in tqdm(files):
         file_name = file.rsplit(".", 1)[0]
-        original_size = image_size.get_image_size_cv_format(source_dir + file)
         file_path = dest_dir + file_name + '.jpg'
 
         if os.path.isfile(file_path) and args.fix_gray is not None:
             log.info('Fixing existing img from "%s"', file_path)
             original_sized_enhanced = misc.imread(file_path)
+            original_size = original_sized_enhanced.shape
             for size_info in config['sizes']:
                 if original_size[1] < size_info['width']:
                     sized_img = original_sized_enhanced
