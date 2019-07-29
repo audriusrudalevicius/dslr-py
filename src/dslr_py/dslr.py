@@ -210,7 +210,8 @@ class Processor:
 
 
 def create_init_object(model="iphone_orig", tf_device='/gpu:0'):
-    tf.device(tf_device)
+    if tf_device is not None:
+        tf.device(tf_device)
     res_sizes = utils.get_resolutions()
     IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_SIZE = utils.get_specified_res(res_sizes, model, resolution)
 

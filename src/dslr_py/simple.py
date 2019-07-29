@@ -17,7 +17,7 @@ __all__ = ['main']
 
 
 def save_img_array(img_arr, file_path, quality=70):
-    pil_image = misc.toimage(img_arr, channel_axis=2)
+    pil_image = misc.toimage(img_arr, channel_axis=2, cmin=0, cmax=255)
     pil_image.save(file_path, format='JPEG', quality=quality)
 
 
@@ -36,7 +36,7 @@ def main(fp=sys.stdout, argv=None):
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--partition', type=str, default='0/1')
     parser.add_argument('--no_skip', action='store_true')
-    parser.add_argument('--fix_resizing', type=float, default=None)
+    parser.add_argument('--fix_gray', action='store_true')
     parser.add_argument('--config', type=str)
     parser.add_argument('--version_name', type=str, default='v1')
     args = parser.parse_args(argv)
@@ -55,7 +55,7 @@ def main(fp=sys.stdout, argv=None):
                 return False
         file_name = f.rsplit(".", 1)[0]
         file_path = dest_dir + 'large' + '/v1_' + file_name + '.jpg'
-        if args.no_skip or args.fix_resizing is not None:
+        if args.no_skip or args.fix_gray is not None:
             return True
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return False
@@ -101,35 +101,38 @@ def main(fp=sys.stdout, argv=None):
     for file in tqdm(files):
         file_name = file.rsplit(".", 1)[0]
         original_size = image_size.get_image_size_cv_format(source_dir + file)
+        file_path = dest_dir + file_name + '.jpg'
 
-        if args.fix_resizing:
-            min_size = config['sizes'][0]
-            has_upscale_size = False
-
+        if os.path.isfile(file_path) and args.fix_gray is not None:
+            log.info('Fixing existing img from "%s"', file_path)
+            original_sized_enhanced = misc.imread(file_path)
             for size_info in config['sizes']:
                 if original_size[1] < size_info['width']:
-                    has_upscale_size = True
+                    sized_img = original_sized_enhanced
+                    log.debug('Size %s is too small for %s', size_info['name'], original_size[1])
+                else:
+                    log.debug('Saving fixed re-sized image: %s', file_path)
+                    sized_img = utils.rescale_by_width(original_sized_enhanced, size_info['width'])
+                file_path = dest_dir + size_info['name'] + '/' + args.version_name + '_' + file_name + '.jpg'
 
-            fix_dest_path = dest_dir + min_size['name'] + '/' + args.version_name + '_' + file_name + '.jpg'
+                try:
+                    save_img_array(sized_img, file_path)
 
-            if not os.path.isfile(fix_dest_path):
-                log.warning('File "%s" not found', fix_dest_path)
-                continue
-
-            dest_size = image_size.get_image_size_cv_format(fix_dest_path)
-            original_ar = original_size[0] / original_size[1]
-            dest_ar = dest_size[0] / dest_size[1]
-            ar_diff = abs(dest_ar - original_ar)
-
-            if ar_diff < args.fix_resizing and not has_upscale_size:
-                log.info(
-                    'File "%s" no need to fix due diff is %f. %s/%s',
-                    file_name, ar_diff, original_size,
-                    dest_size
-                )
-                continue
-            log.info('Fixing image "%s" size diff %f', file_name, ar_diff)
-
+                    if config['s3']['upload']:
+                        upload_pool.submit(
+                            utils.upload_completed_file,
+                            uploader,
+                            full_file_name=file,
+                            size_name=size_info['name'],
+                            version_name=args.version_name,
+                            src_file_path=file_path
+                        )
+                except KeyboardInterrupt:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    raise
+            continue
+        log.info('Generating image from original "%s"', source_dir + file)
         z = misc.imread(source_dir + file)
         original_size = z.shape
         image = np.float16(misc.imresize(z, res_sizes[model_type])) / 255
@@ -152,20 +155,19 @@ def main(fp=sys.stdout, argv=None):
             assert original_sized_enhanced.shape[1] == original_size[1]
 
             # Save Original size
-            file_path = dest_dir + file_name + '.jpg'
-            save_img_array(original_sized_enhanced, file_path)
+            save_img_array(original_sized_enhanced * 255, file_path)
 
             for size_info in config['sizes']:
                 if original_size[1] < size_info['width']:
                     sized_img = original_sized_enhanced
-                    log.debug('Size %s is too small for %s', size_info['name'], image.shape[1])
+                    log.debug('Size %s is too small for %s', size_info['name'], original_size[1])
                 else:
                     log.debug('Saving re-sized image: %s', file_path)
                     sized_img = utils.rescale_by_width(original_sized_enhanced, size_info['width'])
                 file_path = dest_dir + size_info['name'] + '/' + args.version_name + '_' + file_name + '.jpg'
 
                 try:
-                    save_img_array(sized_img, file_path)
+                    save_img_array(sized_img * 255, file_path)
 
                     if config['s3']['upload']:
                         upload_pool.submit(
