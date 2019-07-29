@@ -165,6 +165,11 @@ def upload_completed_file(uploader, full_file_name=None, size_name=None, version
         upload_log.debug('Uploading resized image "%s" to "%s"', src_file_path, upload_path)
         uploader.upload(src_file_path, upload_path)
         upload_log.info('Uploaded image "%s" to "%s"', src_file_path, upload_path)
+
+        upload_path2 = uploader.format_path(full_file_name, size_name, 'v1')
+        upload_log.debug('Uploading alternative resized image "%s" to "%s"', src_file_path, upload_path2)
+        uploader.upload(src_file_path, upload_path2)
+        upload_log.info('Uploaded alternative image "%s" to "%s"', src_file_path, upload_path2)
     except Exception as e:
         upload_log.error('Failed to upload file to s3: %s', src_file_path)
         if os.path.exists(src_file_path):

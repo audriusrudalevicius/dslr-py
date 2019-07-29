@@ -36,7 +36,6 @@ def main(fp=sys.stdout, argv=None):
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--partition', type=str, default='0/1')
     parser.add_argument('--no_skip', action='store_true')
-    parser.add_argument('--fix_gray', action='store_true')
     parser.add_argument('--config', type=str)
     parser.add_argument('--version_name', type=str, default='v1')
     args = parser.parse_args(argv)
@@ -55,7 +54,7 @@ def main(fp=sys.stdout, argv=None):
                 return False
         file_name = f.rsplit(".", 1)[0]
         file_path = dest_dir + 'large' + '/v1_' + file_name + '.jpg'
-        if args.no_skip or args.fix_gray is not None:
+        if args.no_skip:
             return True
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return False
@@ -102,36 +101,6 @@ def main(fp=sys.stdout, argv=None):
         file_name = file.rsplit(".", 1)[0]
         file_path = dest_dir + file_name + '.jpg'
 
-        if os.path.isfile(file_path) and args.fix_gray is not None:
-            log.info('Fixing existing img from "%s"', file_path)
-            original_sized_enhanced = misc.imread(file_path)
-            original_size = original_sized_enhanced.shape
-            for size_info in config['sizes']:
-                if original_size[1] < size_info['width']:
-                    sized_img = original_sized_enhanced
-                    log.debug('Size %s is too small for %s', size_info['name'], original_size[1])
-                else:
-                    log.debug('Saving fixed re-sized image: %s', file_path)
-                    sized_img = utils.rescale_by_width(original_sized_enhanced, size_info['width'])
-                file_path = dest_dir + size_info['name'] + '/' + args.version_name + '_' + file_name + '.jpg'
-
-                try:
-                    save_img_array(sized_img, file_path)
-
-                    if config['s3']['upload']:
-                        upload_pool.submit(
-                            utils.upload_completed_file,
-                            uploader,
-                            full_file_name=file,
-                            size_name=size_info['name'],
-                            version_name=args.version_name,
-                            src_file_path=file_path
-                        )
-                except KeyboardInterrupt:
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                    raise
-            continue
         log.info('Generating image from original "%s"', source_dir + file)
         z = misc.imread(source_dir + file)
         original_size = z.shape
